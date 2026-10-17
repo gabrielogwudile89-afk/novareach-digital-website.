@@ -179,4 +179,4 @@ function handleActiveSpeakerChange(speakers: Participant[]) {
 
 function handleDisconnect() {
   console.log('disconnected from room');
-}
+}npm install livekit-client --save
