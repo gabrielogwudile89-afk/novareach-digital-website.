@@ -1,4 +1,4 @@
-</body><!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -29,3 +29,197 @@ section{padding:76px 0}.section-head{text-align:center;max-width:670px;margin:0 
 <footer><div class="wrap foot"><span>© <span id="year"></span> NovaReach Digital. All rights reserved.</span><span>Digital services for growing brands.</span></div></footer>
 <script>document.getElementById('year').textContent=new Date().getFullYear();</script>
 </body></html>
+
+<!-- NovaReach Digital AI Assistant -->
+<style>
+#nova-chat-button {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+  background: #138a55;
+  color: white;
+  border: 0;
+  border-radius: 30px;
+  padding: 15px 20px;
+  font-size: 16px;
+  font-weight: bold;
+}
+#nova-chat-box {
+  display: none;
+  position: fixed;
+  right: 12px;
+  bottom: 80px;
+  width: calc(100% - 24px);
+  max-width: 360px;
+  height: 430px;
+  background: white;
+  color: #172033;
+  border-radius: 16px;
+  box-shadow: 0 5px 30px #0004;
+  z-index: 9999;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+#nova-chat-box.open {
+  display: flex;
+  flex-direction: column;
+}
+#nova-chat-header {
+  background: #10233f;
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#nova-chat-close {
+  background: none;
+  border: 0;
+  color: white;
+  font-size: 24px;
+}
+#nova-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  background: #f5f7fa;
+}
+.nova-message {
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin: 8px 0;
+  max-width: 85%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nova-bot {
+  background: #e5eaf1;
+  margin-right: auto;
+}
+.nova-user {
+  background: #138a55;
+  color: white;
+  margin-left: auto;
+}
+#nova-chat-form {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+}
+#nova-chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #ccd2dc;
+  border-radius: 9px;
+}
+#nova-chat-send {
+  background: #138a55;
+  color: white;
+  border: 0;
+  border-radius: 9px;
+  padding: 10px;
+}
+</style>
+
+<button id="nova-chat-button" type="button"
+  aria-expanded="false">
+  Chat with NovaReach AI
+</button>
+
+<section id="nova-chat-box" aria-label="NovaReach AI assistant">
+  <header id="nova-chat-header">
+    <div>
+      <strong>NovaReach AI</strong><br>
+      <small>Business Assistant</small>
+    </div>
+    <button id="nova-chat-close" type="button"
+      aria-label="Close chat">×</button>
+  </header>
+
+  <div id="nova-chat-messages" aria-live="polite">
+    <div class="nova-message nova-bot">
+      Hello! Welcome to NovaReach Digital.
+      Ask me about our services, pricing, or starting a project.
+    </div>
+  </div>
+
+  <form id="nova-chat-form">
+    <input id="nova-chat-input" maxlength="1500"
+      placeholder="Ask about our services..." required>
+    <button id="nova-chat-send" type="submit">Send</button>
+  </form>
+</section>
+
+<script>
+(() => {
+  const button = document.getElementById("nova-chat-button");
+  const box = document.getElementById("nova-chat-box");
+  const close = document.getElementById("nova-chat-close");
+  const form = document.getElementById("nova-chat-form");
+  const input = document.getElementById("nova-chat-input");
+  const messages = document.getElementById("nova-chat-messages");
+  const send = document.getElementById("nova-chat-send");
+  const history = [];
+
+  button.addEventListener("click", () => {
+    box.classList.toggle("open");
+    button.setAttribute(
+      "aria-expanded",
+      String(box.classList.contains("open"))
+    );
+  });
+
+  close.addEventListener("click", () => {
+    box.classList.remove("open");
+    button.setAttribute("aria-expanded", "false");
+  });
+
+  function addMessage(text, who) {
+    const item = document.createElement("div");
+    item.className = "nova-message nova-" + who;
+    item.textContent = text;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question || send.disabled) return;
+
+    input.value = "";
+    addMessage(question, "user");
+    history.push({ role: "user", content: question });
+    send.disabled = true;
+
+    try {
+      const response = await fetch("/.netlify/functions/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history.slice(-10) })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Please try again.");
+      }
+      if (typeof data.reply !== "string") {
+        throw new Error("The assistant returned an invalid response.");
+      }
+
+      addMessage(data.reply, "bot");
+      history.push({ role: "assistant", content: data.reply });
+    } catch (error) {
+      history.pop();
+      addMessage(
+        "I couldn't connect to the AI service. Please try again later.",
+        "bot"
+      );
+    } finally {
+      send.disabled = false;
+    }
+  });
+})();
+</script>
