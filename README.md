@@ -1,4 +1,13 @@
-
+try {
+  const response = await room.localParticipant!.performRpc({
+    destinationIdentity: 'recipient-identity',
+    method: 'greet',
+    payload: 'Hello from RPC!',
+  });
+  console.log('RPC response:', response);
+} catch (error) {
+  console.error('RPC call failed:', error);
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
