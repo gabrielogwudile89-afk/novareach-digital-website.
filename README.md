@@ -1,49 +1,94 @@
 
-create table if not exists public.listings (
-  id uuid primary key default gen_random_uuid(),
-  seller_id uuid not null references auth.users(id)
-    on delete cascade,
-  title text not null
-    check (char_length(title) between 3 and 120),
-  description text not null
-    check (char_length(description) <= 5000),
-  price numeric(12,2) not null check (price > 0),
-  listing_type text not null
-    check (listing_type in ('product', 'service')),
-  status text not null default 'active'
-    check (status in ('draft', 'active')),
-  created_at timestamptz not null default now()
-);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Novareach Digital Live</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #10131b;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .container {
+      max-width: 650px;
+      margin: auto;
+    }
+    video {
+      width: 100%;
+      background: #000;
+      border-radius: 16px;
+      aspect-ratio: 9 / 16;
+      object-fit: cover;
+    }
+    button {
+      padding: 13px 18px;
+      margin: 8px 4px;
+      border: 0;
+      border-radius: 9px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .start { background: #24d6a0; color: #10131b; }
+    .stop { background: #ff5c68; color: white; }
+    #status { color: #b8c2d8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔴 Novareach Live</h1>
+    <p>Preview your camera before going live.</p>
 
-alter table public.listings enable row level security;
+    <video id="camera" autoplay playsinline muted></video>
 
-create index if not exists listings_status_created_idx
-on public.listings (status, created_at desc);
+    <p id="status">Camera is off.</p>
 
-create policy "Anyone can view active listings"
-on public.listings
-for select
-to anon, authenticated
-using (status = 'active' or seller_id = auth.uid());
+    <button class="start" id="start">Start Camera</button>
+    <button class="stop" id="stop">Stop Camera</button>
 
-create policy "Sellers can create their own listings"
-on public.listings
-for insert
-to authenticated
-with check (seller_id = auth.uid());
+    <p>Live broadcasting to other users is not connected yet.</p>
+    <a href="/" style="color:#24d6a0">Back to homepage</a>
+  </div>
 
-create policy "Sellers can update their own listings"
-on public.listings
-for update
-to authenticated
-using (seller_id = auth.uid())
-with check (seller_id = auth.uid());
+  <script>
+    const video = document.getElementById("camera");
+    const status = document.getElementById("status");
+    let stream = null;
 
-create policy "Sellers can delete their own listings"
-on public.listings
-for delete
-to authenticated
-using (seller_id = auth.uid());
+    document.getElementById("start").onclick = async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Open this page using HTTPS in a supported browser.");
+        }
 
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: true
+        });
 
+        video.srcObject = stream;
+        status.textContent = "Camera preview is running.";
+      } catch (error) {
+        status.textContent = "Could not start camera: " + error.message;
+      }
+    };
 
+    document.getElementById("stop").onclick = () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      status.textContent = "Camera is off.";
+    };
+
+    window.addEventListener("pagehide", () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    });
+  </script>
+</body>
+</html>
